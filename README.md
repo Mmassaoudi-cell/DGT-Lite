@@ -1,10 +1,8 @@
 # DGT-Lite
 
 DGT-Lite is a compact, deadline-aware scheduler for virtual-machine (VM) task allocation in edge
-computing, distilled from a deadline-aware graph-attention teacher (DGT-Sched). This repository
-contains the full source code for the simulator, all baseline schedulers, the candidate hybrid
-models, the training/distillation pipeline, and the experiment scripts used to produce every
-result reported in the paper, so that the study can be reproduced end to end.
+computing, distilled from a deadline-aware graph-attention teacher (DGT-Sched). 
+
 
 ## Repository structure
 
