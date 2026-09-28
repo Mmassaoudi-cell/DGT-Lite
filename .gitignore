@@ -1,0 +1,32 @@
+# Paper manuscript, figures, tables, and compiled outputs (not part of the code release)
+manuscript/
+results/
+*.pdf
+*.zip
+
+# Research/audit narrative documents (paper-artifact reports, not source code)
+SOURCE_PAPER_AUDIT.md
+REPRODUCTION_REPORT.md
+SOURCE_WEAKNESS_ANALYSIS.md
+MODEL_CANDIDATES.md
+MODEL_SELECTION_REPORT.md
+FINAL_RESEARCH_SUMMARY.md
+DATA_AUDIT.md
+DATA_SPLIT_MANIFEST.csv
+BENCHMARK_WTL.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

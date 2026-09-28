@@ -1,0 +1,77 @@
+# FROZEN final-model configuration. Selected via validation-only screening
+# (MODEL_SELECTION_REPORT.md) and lightly tuned via Optuna TPE on validation seeds only
+# (results/aggregate/tuning_distilled_dgt.json). Do NOT modify this file based on TEST
+# performance (master protocol section 11/section 35 acceptance gate).
+
+final_model:
+  name: "Distilled-DGT"              # manuscript-facing name: "DGT-Lite"
+  code_class: "src.models.candidates.DistilledDGT"
+  architecture:
+    type: "single GRUCell (unidirectional, non-bidirectional) + linear head, no graph module"
+    hidden_dim: 16
+    feat_dim: 10                      # src/models/flexible.py: FEAT_DIM
+
+  training:
+    method: "knowledge distillation from DGT-Sched teacher"
+    loss: "alpha * CE(student_logits, oracle_label) + (1-alpha) * T^2 * KL(softmax(student/T) || softmax(teacher/T))"
+    alpha: 0.4496057029623430
+    temperature_T: 2.2485905703336018
+    learning_rate: 0.0007957505184012569
+    epochs: 12
+    batch_size: 32
+    optimizer: "Adam"
+    weight_decay: 1.0e-5
+    label_source: "deadline-aware lookahead oracle (src/simulator/schedulers.py:LookaheadOracle)"
+    tuning_protocol: "Optuna TPE, 15 trials, validation seeds only (SPLIT_SEEDS['val'][:3]), scale=small"
+    tuning_log: "results/aggregate/tuning_distilled_dgt.json"
+
+teacher_model:
+  name: "DGT-Sched"
+  code_class: "src.models.candidates.DGTSched"
+  architecture:
+    temporal_encoder: "dilated causal TCN (2 conv layers, dilation 2 then 1)"
+    spatial_encoder: "2-layer sparse graph attention (GAT), 4 heads, true VM adjacency"
+    hidden_dim: 32
+  training:
+    loss: "CE(logits, oracle_label) + lambda * E_softmax(logits)[relu(-slack)]"
+    lambda_slack: 0.5
+    learning_rate: 0.001
+    epochs: "14 (small) / 6 (medium) -- see src/experiments/benchmark.py SUPERVISED_EPOCHS"
+    batch_size: 32
+    optimizer: "Adam"
+
+data:
+  simulator: "src/simulator/core.py (documented CloudSim substitute, SOURCE_PAPER_AUDIT.md #8)"
+  scales_primary: ["small", "medium"]     # 20 VM / 200 VM, main benchmark grid
+  scales_supplementary: ["large", "table2"]  # 2000 VM scalability-only; 50 VM reproduction-fidelity-only
+  features: "src/simulator/core.py:EdgeSimulator.vm_snapshot_features (10-dim, documented assumption #1)"
+  adjacency: "co-host union communication-affinity edges (documented assumption #2)"
+  train_seeds:
+    small: "0-39"
+    medium: "0-9"
+  val_seeds: "1000-1002 (screening), 1003-1014 (reserved tuning pool)"
+  test_seeds: "2000-2009 (10 seeds; FROZEN, never used for model selection or tuning)"
+  split_type: "scenario split (disjoint random seeds -> disjoint workload realizations), never a row split"
+  preprocessing: "no scaling/normalization required (all features already bounded/ratio-based); fit-on-train N/A"
+
+model_selection_metric:
+  name: "Scheduling Quality Score (SQS)"
+  formula: "0.50*deadline_compliance + 0.35*load_balance_fairness + 0.15*(1 - energy/energy_ref)"
+  definition_file: "src/utils/metrics.py"
+  fixed_before_screening: true
+
+evaluation_protocol:
+  n_seeds_headline: 10
+  seed_pairing: "train_seed_i paired with eval/test_seed_i, i = 0..9"
+  statistical_test: "Wilcoxon signed-rank, paired by seed index, Holm correction across baselines, alpha=0.05"
+  primary_metrics: ["deadline_compliance", "load_balance_fairness", "energy"]
+  secondary_metrics: ["mean_response_time", "makespan", "latency_ms_per_decision", "n_params"]
+
+revision_1_additions:
+  minimal_fix_baseline: "DCLD-net-CE: identical architecture to DCLD-net-repro (BiGRU+attention+GCN), cross-entropy loss instead of Eq.7's MSE-on-softmax; isolates loss vs. architecture contribution to the collapse"
+  rl_budget_equalization: "DA-STGAT-RL and MoE-GAT-AC actor-critic training budget increased from 3/2 epochs over 10 scenarios (small/medium) to 6/4 epochs over 15/10 scenarios, to remove the training-budget asymmetry versus imitation-learned candidates flagged in review; final-model selection (Distilled-DGT) unaffected -- re-verified against the equalized-budget main grid, not re-selected"
+  oversmoothing_diagnostic: "results/aggregate/oversmoothing_diagnostic.json -- direct measurement of per-VM node-embedding cosine similarity after each GCN layer, substantiating the over-smoothing mechanism rather than only inferring it from ablation"
+
+frozen_on: "2026-09-10"
+frozen_by: "automated research pipeline, this study"
+do_not_modify_after_test_evaluation: true
