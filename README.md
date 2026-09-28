@@ -119,7 +119,6 @@ If you use this code, please cite the paper:
 @article{massaoudi2026dgtlite,
   title   = {DGT-Lite: A Distilled Deadline-Aware Graph-Attention Scheduler for Load Balancing in Edge Computing},
   author  = {Massaoudi, Mohamed and Ez Eddin, Maymouna},
-  journal = {IEEE Transactions on Consumer Electronics},
   year    = {2026}
 }
 ```
